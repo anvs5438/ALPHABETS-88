@@ -1,0 +1,608 @@
+
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Quiz — Polished (Syam Prasad)</title>
+<link href="https://fonts.googleapis.com/css?family=Orbitron:700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg1:#291c6e;
+  --bg2:#00167d;
+  --panel:#12132a;
+  --accent:#2debb0;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  background: radial-gradient(circle at 10% 10%, #06104a 0%, var(--bg1) 25%, var(--bg2) 70%);
+  font-family: "Orbitron", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color:#dfe;
+  padding:28px 12px;
+}
+.container{
+  width:820px;
+  max-width:96%;
+  border-radius:18px;
+  overflow:hidden;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0.25) 100%);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.45);
+  border: 1px solid rgba(255,255,255,0.03);
+}
+.header{
+  background: linear-gradient(90deg,#9b36ff 20%, #53f0d6 100%);
+  padding:20px 18px;
+  text-align:center;
+  color:#fff;
+  font-size:26px;
+  font-weight:700;
+  letter-spacing:1px;
+}
+.controls{
+  display:flex;
+  gap:12px;
+  justify-content:center;
+  align-items:center;
+  padding:12px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.06));
+  flex-wrap:wrap;
+}
+.control-item{ display:flex; align-items:center; gap:8px; }
+.select, .small-btn, .num-input{
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: #dff;
+  padding:7px 10px;
+  border-radius:8px;
+  font-weight:700;
+}
+.small-btn{
+  background: linear-gradient(90deg,#4ef1c7,#3abf8b);
+  border:none;
+  cursor:pointer;
+  padding:9px 14px;
+}
+.num-input{ width:84px; padding:8px; color:#000; background:#fff; border-radius:8px; font-weight:700; }
+.panel{ padding:16px; position:relative; background: linear-gradient(180deg, rgba(5,8,30,0.6), var(--panel)); }
+.top-row{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.qbox{ background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:14px; padding:18px; margin-top:12px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); border-left:6px solid var(--accent, rgba(45,235,176,0.12)); }
+.question { font-size:20px; color:#e6fff7; margin-bottom:14px; }
+
+.options { display:flex; flex-direction:column; gap:12px; }
+.answer-btn{ display:flex; align-items:center; justify-content:center; padding:14px 18px; border-radius:12px; background: linear-gradient(90deg,#2f00c8,#4b2bff); color:#fff; font-size:18px; font-weight:800; border: 2px solid rgba(255,255,255,0.06); cursor:pointer; transition: transform 140ms, box-shadow 160ms, background 160ms; box-shadow: 0 6px 24px rgba(30,20,60,0.35); user-select:none; text-align:center; }
+.answer-btn:hover{ transform: translateY(-3px); }
+.answer-btn:active{ transform: translateY(-1px); }
+.answer-btn[disabled]{ opacity:0.9; cursor:default; transform:none; }
+
+@keyframes flashCorrect { 0%{transform:scale(1)} 40%{transform:scale(1.02)} 100%{transform:none} }
+@keyframes flashWrong { 0%{transform:scale(1)} 40%{transform:scale(1.02)} 100%{transform:none} }
+.answer-btn.correct { background: #FFD700; border-color:#FFD700; color:#000; animation: flashCorrect 420ms ease; box-shadow:0 8px 28px rgba(255,215,0,0.16); }
+.answer-btn.incorrect { background: #B22222; border-color:#8B0000; color:#fff; animation: flashWrong 420ms ease; box-shadow:0 8px 28px rgba(178,34,34,0.12); }
+
+.progress-bar{ height:8px; background: rgba(255,255,255,0.03); border-radius:8px; margin:18px 0; overflow:hidden; }
+.progress{ height:100%; width:0%; background: linear-gradient(90deg,#3a1bff,#5ec0ff); transition:width 200ms; }
+.counter{ text-align:center; color: #9fffe7; font-weight:700; padding:6px; margin-top:6px; }
+
+/* Timer styles */
+.time-left { font-weight: 700; margin-top: 8px; }
+.time-left-label { color: #FFB400; /* deep yellow */ }
+#timer { color: #B22222 !important; font-weight:900; font-size:20px; } /* deep red */
+#activityTimer { color: #ffffff !important; font-weight:800; font-size:13px; margin-top:6px; letter-spacing:1px; } /* deep white */
+
+.footer{ padding:20px; height:56px; }
+
+@media (max-width:760px){
+  .top-row{ flex-direction:column; }
+  .answer-btn{ font-size:16px; padding:12px; }
+  .container{ padding-bottom:20px; }
+}
+</style>
+</head>
+<body>
+<div class="container" role="application" aria-label="Quiz app">
+  <div class="header">QUIZ (శ్యాం ప్రసాద్)</div>
+
+  <div class="controls" role="region" aria-label="Quiz controls">
+    <div class="control-item" title="Number of choices per question">
+      <label style="font-weight:700">Choices:</label>
+      <select id="choiceSelect" class="select" aria-label="Choices"></select>
+      <input id="choiceCustom" class="num-input" type="number" placeholder="Custom" style="display:none;" min="1" />
+    </div>
+
+    <div class="control-item" title="Number of questions">
+      <label style="font-weight:700">Questions:</label>
+      <select id="countSelect" class="select" aria-label="Questions count"></select>
+      <input id="countCustom" class="num-input" type="number" placeholder="Custom" style="display:none;" min="1" />
+    </div>
+
+    <div class="control-item" title="Countdown seconds">
+      <label style="font-weight:700">Time (s):</label>
+      <select id="timeSelect" class="select" aria-label="Time seconds"></select>
+      <input id="timeCustom" class="num-input" type="number" placeholder="Seconds" style="display:none;" min="0" />
+    </div>
+
+    <div class="control-item" title="Enable or disable countdown">
+      <label style="font-weight:700"><input id="timerEnable" type="checkbox" style="transform:scale(1.1); margin-right:8px;" /> Enable Timer</label>
+    </div>
+
+    <div class="control-item" title="Enable mistake limit">
+      <label style="font-weight:700"><input id="mistakeEnable" type="checkbox" style="transform:scale(1.1); margin-right:8px;" /> Limit Mistakes</label>
+      <select id="mistakeSelect" class="select" style="margin-left:6px;"></select>
+      <input id="mistakeCustom" class="num-input" type="number" placeholder="Custom" style="display:none; margin-left:6px;" min="0" />
+    </div>
+
+    <div class="control-item">
+      <label style="font-weight:700">Theme:</label>
+      <select id="themeSelect" class="select" aria-label="Theme"></select>
+    </div>
+
+    <div class="control-item">
+      <button id="startBtn" class="small-btn" aria-label="Start quiz">Start / Restart</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="top-row">
+      <div style="width:68%">
+        <div class="qbox" id="qbox" aria-live="polite">
+          <div id="quiz">Press Start to begin</div>
+        </div>
+      </div>
+
+      <div style="width:30%; padding-left:12px; text-align:right;">
+        <div class="time-left"><span class="time-left-label">Time Left:</span> <span id="timer">--:--</span></div>
+        <div id="activityTimer" aria-label="Elapsed time">00:00</div>
+        <div style="height:8px"></div>
+        <div class="progress-bar"><div id="progress" class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div></div>
+        <div class="counter" id="counter">Question 0 of 0</div>
+        <div class="counter" id="mistakesLeft" style="margin-top:10px; color:#ffb3b3; display:none;">Mistakes left: --</div>
+      </div>
+    </div>
+    <div class="footer"></div>
+  </div>
+</div>
+
+<script>
+/* =========================
+   Polished Quiz JS
+   - redundant activity timer starts removed
+   - clearer comments and small accessibility tweaks
+   ========================= */
+
+/* --- dataset (same as original, truncated here for brevity) --- */
+const questions = [
+  
+ { question: "न", options: ["భ", "ద", "త", "ప", "న", "థ", "స", "ధ"], correct: 4, answer: "న" },
+    { question: "ब", options: ["ల", "బ", "ప", "భ", "ఝ", "థ", "ధ", "మ"], correct: 1, answer: "బ" },
+    { question: "ख", options: ["ఘ", "డ", "ఖ", "ధ", "ఝ", "బ", "శ", "గ"], correct: 2, answer: "ఖ" },
+    { question: "झ", options: ["జ", "ఫ", "న", "ఝ", "స", "శ", "భ", "క"], correct: 3, answer: "ఝ" },
+    { question: "ణ", options: ["ऋ", "ण", "व", "त", "श्र", "न", "क्ष", "है"], correct: 1, answer: "ण" },
+    { question: "क्ष", options: ["హ", "క్ష", "భ", "ష", "ల", "ప", "ఫ", "మ"], correct: 1, answer: "క్ష" },  
+    { question: "హ", options: ["त", "श", "ब", "न", "र", "ज्ञ", "ह", "र"], correct: 6, answer: "ह" },
+    { question: "म", options: ["ల", "ధ", "భ", "ఠ", "థ", "బ", "శ", "మ"], correct: 7, answer: "మ" },
+    { question: "त", options: ["భ", "థ", "బ", "ద", "ఝ", "ధ", "జ", "త"], correct: 7, answer: "త" },
+    { question: "థ", options: ["ध", "ल", "ट", "त", "भ", "द", "न", "थ"], correct: 7, answer: "थ" },
+    { question: "ౠ", options: ["इ", "ओ", "औ", "ऊ", "अं", "अः", "उ", "ऋ"], correct: 7, answer: "ऋ" },
+    { question: "श", options: ["శ", "హ", "ష", "స", "భ", "ప", "ల", "మ"], correct: 0, answer: "శ" },
+    { question: "ठ", options: ["ణ", "ఢ", "ఠ", "డ", "శ", "జ", "ట", "న"], correct: 2, answer: "ఠ" },
+    { question: "ట", options: ["भ", "श", "ढ", "श्र", "क्ष", "ट", "थ", "द"], correct: 5, answer: "ट" },
+    { question: "ల", options: ["श", "त", "र", "ध", "न", "क्ष", "ल", "ज्ञ"], correct: 6, answer: "ल" },
+    { question: "ल", options: ["భ", "శ", "ళ", "ఢ", "మ", "హ", "స", "స"], correct: 2, answer: "ళ" },
+    { question: "ड", options: ["ణ", "న", "ఝ", "థ", "ద", "ఢ", "డ", "ధ"], correct: 6, answer: "డ" },
+    { question: "న", options: ["श", "थ", "ट", "व", "ध", "न", "ऋ", "भ"], correct: 5, answer: "न" },
+    { question: "త", options: ["ल", "थ", "क्ष", "द", "त", "ह", "श्न", "ध"], correct: 4, answer: "त" },
+    { question: "ఛ", options: ["थ", "क्ष", "ज", "झ", "भ", "च", "छ", "श्र"], correct: 6, answer: "छ" },
+    { question: "చ", options: ["श्र", "छ", "झ", "च", "भ", "न", "ज", "व"], correct: 3, answer: "च" },
+    { question: "గ", options: ["र", "ग", "झ", "ज्ञ", "घ", "ऋ", "फ", "ट"], correct: 1, answer: "ग" },
+    { question: "జ్ఞ", options: ["प", "ब", "ज्ञ", "क्ष", "श्र", "श", "र", "न"], correct: 2, answer: "ज्ञ" },
+    { question: "ह", options: ["ప", "మ", "భ", "ల", "డ", "ష", "ఫ", "హ"], correct: 7, answer: "హ" },
+    { question: "ప", options: ["ब", "भ", "प", "फ", "ध", "ल", "श्र", "थ"], correct: 2, answer: "प" },
+    { question: "ण", options: ["ధ", "ష", "ఝ", "ణ", "భ", "జ", "ద", "న"], correct: 3, answer: "ణ" },
+    { question: "ल", options: ["ల", "ఫ", "హ", "స", "భ", "శ", "ఖ", "మ"], correct: 0, answer: "ల" },
+    { question: "ఐ", options: ["अं", "ए", "ऊ", "ओ", "इ", "औ", "उ", "ऐ"], correct: 7, answer: "ऐ" },
+    { question: " त्र", options: ["ఫ", "క్ష", "త్ర", "థ", "హ", "ద", "ప", "ష"], correct: 2, answer: "త్ర" },
+    { question: "स", options: ["మ", "భ", "స", "ప", "ష", "ఝ", "ల", "హ"], correct: 2, answer: "స" },
+    { question: "क", options: ["గ", "క", "బ", "ష", "ణ", "ఖ", "ఘ", "ల"], correct: 1, answer: "క" },
+    { question: "క", options: ["ब", "घ", "त", "व", "ग", "द", "ख", "क"], correct: 7, answer: "क" },
+    { question: "భ", options: ["ल", "भ", "म", "ध", "ब", "थ", "न", "ष"], correct: 1, answer: "भ" },
+    { question: "ఝ", options: ["श्र", "क्ष", "ज", "भ", "श", "झ", "थ", "ण"], correct: 5, answer: "झ" },
+    { question: "म", options: ["ణ", "మ", "ఫ", "ఢ", "ప", "ష", "స", "బ"], correct: 1, answer: "మ" },
+    { question: "ष", options: ["భ", "ల", "మ", "ష", "ప", "స", "హ", "ళ"], correct: 3, answer: "ష" },
+    { question: "ద", options: ["श्र", "य", "ट", "न", "भ", "थ", "ध", "द"], correct: 7, answer: "द" },
+    { question: "డ", options: ["श्र", "ढ", "ह", "ड", "झ", "द", "व", "क्ष"], correct: 3, answer: "ड" },
+    { question: "छ", options: ["ధ", "చ", "ఛ", "హ", "స", "ఝ", "జ", "భ"], correct: 2, answer: "ఛ" },
+    { question: "ग", options: ["య", "స", "న", "ధ", "శ్ర", "గ", "ఘ", "ఢ"], correct: 5, answer: "గ" },
+    { question: "ర", options: ["त", "श्र", "ज्ञ", "ल", "श", "र", "स", "म"], correct: 5, answer: "र" },
+    { question: "ఘ", options: ["द", "द", "ध", "न", "त", "श", "घ", "य"], correct: 6, answer: "घ" },
+    { question: "స", options: ["ज्ञ", "य", "स", "ब", "त", "श", "र", "न"], correct: 2, answer: "स" },
+    { question: "ధ", options: ["ल", "थ", "ध", "ब", "व", "द", "ज्ञ", "ऋ"], correct: 2, answer: "ध" },
+    { question: "జ", options: ["थ", "श्र", "ण", "ज", "क्ष", "य", "झ", "भ"], correct: 3, answer: "ज" },
+    { question: "औ", options: ["ఒ", "ఓ", "ఎ", "ఊ", "అ", "అం", "ఔ", "ఐ"], correct: 6, answer: "ఔ" },
+    { question: "వ", options: ["त", "र", "ज्ञ", "न", "व", "श्र", "ब", "श"], correct: 4, answer: "व" },
+    { question: "ढ", options: ["ఝ", "న", "ష", "భ", "డ", "ద", "ఢ", "ధ"], correct: 6, answer: "ఢ" },
+    { question: "ट", options: ["ఢ", "డ", "న", "ణ", "జ", "క", "ట", "ఠ"], correct: 6, answer: "ట" },
+    { question: "ఢ", options: ["झ", "र", "ढ", "द", "ड", "थ", "क्ष", "ध"], correct: 2, answer: "ढ" },
+    { question: "थ", options: ["ద", "భ", "ఠ", "ష", "థ", "ఝ", "ప", "ధ"], correct: 4, answer: "థ" },
+    { question: "య", options: ["य", "ल", "श", "र", "ज्ञ", "श्र", "त", "झ"], correct: 0, answer: "य" },
+    { question: "ए", options: ["ఏ", "ఓ", "అః", "ఉ", "ఆ", "ఔ", "అం", "ౠ"], correct: 0, answer: "ఏ" },
+    { question: "च", options: ["చ", "ఝ", "ధ", "జ", "హ", "స", "భ", "ఛ"], correct: 0, answer: "చ" },
+    { question: "ఓ", options: ["उ", "आ", "औ", "ए", "अं", "ओ", "इ", "ऊ"], correct: 5, answer: "ओ" },
+    { question: "త్ర", options: ["स", "ढ", "श", "श्र", "छ", "त्र", "ज्ञ", "ष"], correct: 5, answer: "त्र" },
+    { question: "ఠ", options: ["व", "क्ष", "श्र", "ल", "ढ", "श", "ठ", "ड"], correct: 6, answer: "ठ" },
+    { question: "घ", options: ["బ", "ఘ", "ప", "గ", "ఝ", "స", "క", "ధ"], correct: 1, answer: "ఘ" },
+    { question: "ऋ", options: ["ఋ", "ఏ", "ఆ", "ఉ", "అం", "ఎ", "అః", "ఎ"], correct: 0, answer: "ఋ" },
+    { question: "ऋ", options: ["అః", "ఏ", "ఉ", "ఎ", "ఐ", "ౠ", "ఆ", "అం"], correct: 5, answer: "ౠ" },
+    { question: "ओ", options: ["ఔ", "అం", "అః", "ఊ", "ఠ", "ఎ", "అ", "ఒ"], correct: 7, answer: "ఒ" },
+    { question: "ओ", options: ["అః", "ఐ", "ఊ", "అం", "ఓ", "ఎ", "అ", "ఔ"], correct: 4, answer: "ఓ" },
+    { question: "ज्ञ", options: ["ఫ", "భ", "ల", "ప", "హ", "జ్ఞ", "మ", "ష"], correct: 5, answer: "జ్ఞ" },
+    { question: "ఔ", options: ["ऊ", "ए", "अं", "इ", "औ", "उ", "ऐ", "आ"], correct: 4, answer: "औ" },
+    { question: "శ్ర", options: ["र", "ब", "ल", "ज्ञ", "न", "ऋ", "श्र", "श"], correct: 6, answer: "श्र" },
+    { question: "శ", options: ["ज्ञ", "भ", "ब", "र", "ज्ञ", "त", "न", "श"], correct: 7, answer: "श" },
+    { question: "र", options: ["ట", "శ", "స", "ర", "ల", "ళ", "మ", "హ"], correct: 3, answer: "ర" },
+    { question: "ఎ", options: ["ए", "ऊ", "औ", "ऐ", "ओ", "उ", "इ", "अं"], correct: 0, answer: "ए" },
+    { question: "ऐ", options: ["ఎ", "అం", "ఐ", "ఉ", "ౠ", "అః", "ఏ", "ఆ"], correct: 2, answer: "ఐ" },
+    { question: "ब", options: ["ఢ", "ణ", "ష", "భ", "ళ", "బ", "గ", "ఛ"], correct: 5, answer: "బ" },
+    { question: "ష", options: ["ष", "ब", "त", "श", "र", "ज्ञ", "न", "ज्ञ"], correct: 0, answer: "ष" },
+    { question: "ఖ", options: ["ध", "द", "क्ष", "श्र", "त", "ऋ", "य", "ख"], correct: 7, answer: "ख" },
+    { question: "व", options: ["ల", "స", "వ", "ర", "భ", "ప", "హ", "మ"], correct: 2, answer: "వ" },
+    { question: "ए", options: ["ఉ", "ఔ", "ఆ", "అః", "ఎ", "ఓ", "ౠ", "అం"], correct: 4, answer: "ఎ" },
+    { question: "श्र", options: ["ఫ", "శ్ర", "ష", "మ", "భ", "ల", "హ", "ప"], correct: 1, answer: "శ్ర" },
+    { question: "ఫ", options: ["ल", "फ", "भ", "श्र", "ध", "प", "थ", "ब"], correct: 1, answer: "फ" },
+    { question: "य", options: ["మ", "ళ", "స", "య", "శ", "ల", "ట", "హ"], correct: 3, answer: "య" },
+    { question: "క్ష", options: ["श्र", "र", "श", "ज्ञ", "ऋ", "क्ष", "न", "ब"], correct: 5, answer: "क्ष" },
+    { question: "द", options: ["ప", "ఝ", "ధ", "భ", "ద", "న", "ఠ", "థ"], correct: 4, answer: "ద" },
+    { question: "फ", options: ["బ", "భ", "ర", "ప", "ణ", "ఫ", "ళ", "ష"], correct: 5, answer: "ఫ" },
+    { question: "भ", options: ["స", "బ", "గ", "ల", "భ", "ఢ", "ష", "ణ"], correct: 4, answer: "భ" },
+    { question: "ध", options: ["థ", "ద", "భ", "హ", "ధ", "ష", "ఫ", "ప"], correct: 4, answer: "ధ" },
+    { question: "ఏ", options: ["ओ", "ए", "औ", "अं", "उ", "ऐ", "इ", "ऊ"], correct: 1, answer: "ए" },
+    { question: "ज", options: ["క", "స", "జ", "శ", "న", "హ", "ఝ", "భ"], correct: 2, answer: "జ" },
+    { question: "ళ", options: ["त", "ज्ञ", "र", "न", "ज्ञ", "क्ष", "श", "ल"], correct: 7, answer: "ल" },
+    { question: "ఋ", options: ["ऊ", "अः", "औ", "ओ", "उ", "ऋ", "अं", "इ"], correct: 5, answer: "ऋ" },
+    { question: "प", options: ["ణ", "ర", "ష", "భ", "ప", "ళ", "బ", "ఫ"], correct: 4, answer: "ప" },
+    { question: "ఒ", options: ["आ", "उ", "ऊ", "ए", "ओ", "औ", "इ"], correct: 4, answer: "ओ" }
+ 
+ ];
+
+/* --- UI refs --- */
+const choiceSelect = document.getElementById('choiceSelect');
+const countSelect = document.getElementById('countSelect');
+const timeSelect = document.getElementById('timeSelect');
+const choiceCustom = document.getElementById('choiceCustom');
+const countCustom = document.getElementById('countCustom');
+const timeCustom = document.getElementById('timeCustom');
+const timerEnable = document.getElementById('timerEnable');
+const startBtn = document.getElementById('startBtn');
+const quizDiv = document.getElementById('quiz');
+const progressBar = document.getElementById('progress');
+const counterEl = document.getElementById('counter');
+const timerEl = document.getElementById('timer');
+const activityTimerEl = document.getElementById('activityTimer');
+
+const mistakeEnable = document.getElementById('mistakeEnable');
+const mistakeSelect = document.getElementById('mistakeSelect');
+const mistakeCustom = document.getElementById('mistakeCustom');
+const mistakesLeftEl = document.getElementById('mistakesLeft');
+
+const SETTINGS_KEY = 'samas_custom_settings_with_timer_v2';
+
+/* --- defaults --- */
+const defaults = {
+  choices: 4,
+  count: Math.min(24, questions.length),
+  time: 180,
+  timerEnabled: true,
+  mistakesEnabled: false,
+  mistakesAllowed: 0
+};
+
+/* --- populate selects --- */
+[3,4,5,6,'Custom'].forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; choiceSelect.appendChild(o); });
+[10,24,50,75,'All','Custom'].forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; countSelect.appendChild(o); });
+[0,60,120,180,300,600,'Custom'].forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; timeSelect.appendChild(o); });
+[0,1,2,3,5,10,'Custom'].forEach(v => { const o=document.createElement('option'); o.value=v; o.textContent=v; mistakeSelect.appendChild(o); });
+
+/* --- load settings or use defaults --- */
+let saved = localStorage.getItem(SETTINGS_KEY);
+let settings = saved ? JSON.parse(saved) : defaults;
+
+/* --- apply saved settings to UI --- */
+function applySettingsToUI(){
+  if ([3,4,5,6].includes(settings.choices)) { choiceSelect.value = settings.choices; choiceCustom.style.display='none'; }
+  else { choiceSelect.value='Custom'; choiceCustom.style.display=''; choiceCustom.value = settings.choices; }
+
+  if ([10,24,50,75].includes(settings.count)) { countSelect.value = settings.count; countCustom.style.display='none'; }
+  else if (settings.count === questions.length) { countSelect.value = 'All'; countCustom.style.display='none'; }
+  else { countSelect.value='Custom'; countCustom.style.display=''; countCustom.value = settings.count; }
+
+  if ([0,60,120,180,300,600].includes(settings.time)) { timeSelect.value = settings.time; timeCustom.style.display='none'; }
+  else { timeSelect.value='Custom'; timeCustom.style.display=''; timeCustom.value = settings.time; }
+
+  timerEnable.checked = !!settings.timerEnabled;
+
+  mistakeEnable.checked = !!settings.mistakesEnabled;
+  if ([0,1,2,3,5,10].includes(settings.mistakesAllowed)) { mistakeSelect.value = settings.mistakesAllowed; mistakeCustom.style.display='none'; }
+  else { mistakeSelect.value='Custom'; mistakeCustom.style.display=''; mistakeCustom.value = settings.mistakesAllowed; }
+}
+applySettingsToUI();
+
+/* --- events --- */
+let selectsDirty = false;
+choiceSelect.addEventListener('change', ()=>{ selectsDirty = true; choiceSelect.value==='Custom'?choiceCustom.style.display='':choiceCustom.style.display='none'; });
+countSelect.addEventListener('change', ()=>{ selectsDirty = true; countSelect.value==='Custom'?countCustom.style.display='':countCustom.style.display='none'; });
+timeSelect.addEventListener('change', ()=>{ selectsDirty = true; timeSelect.value==='Custom'?timeCustom.style.display='':timeCustom.style.display='none'; });
+timerEnable.addEventListener('change', ()=>{ selectsDirty = true; });
+mistakeSelect.addEventListener('change', ()=>{ selectsDirty = true; mistakeSelect.value==='Custom'?mistakeCustom.style.display='':mistakeCustom.style.display='none'; });
+mistakeEnable.addEventListener('change', ()=>{ selectsDirty = true; });
+
+/* --- helpers --- */
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function sampleOptions(baseOptions, correct, n){ const pool=baseOptions.filter(x=>x!==correct); shuffle(pool); const chosen=pool.slice(0,n-1); chosen.push(correct); return shuffle(chosen); }
+function formatTime(s){ const m=Math.floor(s/60); const r=s%60; return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`; }
+
+/* --- quiz state --- */
+let currentSet=[], idx=0, userAnswers=[], timerInterval=null;
+let quizEnded=false, mistakesCount=0;
+let activityInterval=null, activityStart=null;
+
+/* --- read UI values --- */
+function readUIValues(){
+  let choicesVal = (choiceSelect.value==='Custom') ? parseInt(choiceCustom.value,10)||defaults.choices : parseInt(choiceSelect.value,10);
+  let countVal;
+  if (countSelect.value==='Custom') countVal=parseInt(countCustom.value,10)||Math.min(24,questions.length);
+  else if (countSelect.value==='All') countVal=questions.length;
+  else countVal=parseInt(countSelect.value,10);
+  let timeVal=(timeSelect.value==='Custom')?parseInt(timeCustom.value,10)||0:parseInt(timeSelect.value,10);
+  let mistakesAllowedVal = (mistakeSelect.value==='Custom') ? parseInt(mistakeCustom.value,10)||0 : parseInt(mistakeSelect.value,10);
+  return {
+    choices:Math.max(2,choicesVal),
+    count:Math.min(Math.max(1,countVal),questions.length),
+    time:Math.max(0,timeVal),
+    mistakesEnabled: !!mistakeEnable.checked,
+    mistakesAllowed: Math.max(0, isNaN(mistakesAllowedVal) ? 0 : mistakesAllowedVal )
+  };
+}
+
+/* --- activity timer: start/stop (reset on start) --- */
+function startActivityTimer(){
+  if (activityInterval) { clearInterval(activityInterval); activityInterval=null; }
+  activityStart = Date.now();
+  activityTimerEl.textContent = formatTime(0);
+  activityInterval = setInterval(()=>{
+    const secs = Math.floor((Date.now() - activityStart)/1000);
+    activityTimerEl.textContent = formatTime(secs);
+  },1000);
+}
+function stopActivityTimer(){
+  // Stop the ticking interval but keep activityStart so final elapsed time can be shown.
+  if (activityInterval) clearInterval(activityInterval);
+  activityInterval = null;
+  // DO NOT reset activityStart here — keep its value so showResults() can compute elapsed time.
+  // Do not reset the displayed text either; keep the last visible elapsed time.
+}
+
+/* --- countdown timer --- */
+function startTimer(sec){
+  if (timerInterval) clearInterval(timerInterval);
+  if (!sec || sec <= 0){ timerEl.textContent='--:--'; return; }
+  let remaining = sec;
+  timerEl.textContent = formatTime(remaining);
+  timerInterval = setInterval(()=>{
+    remaining--;
+    if (remaining <= 0){ clearInterval(timerInterval); timerEl.textContent='00:00'; quizEnded=true; stopActivityTimer(); showResults(); }
+    else timerEl.textContent = formatTime(remaining);
+  },1000);
+}
+
+/* --- start quiz --- */
+function startQuiz(){
+  const vals = readUIValues();
+  settings = {
+    choices: vals.choices,
+    count: vals.count,
+    time: vals.time,
+    timerEnabled: !!timerEnable.checked,
+    mistakesEnabled: vals.mistakesEnabled,
+    mistakesAllowed: vals.mistakesAllowed
+  };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  selectsDirty = false;
+
+  // Prepare and sample questions
+  const pool = JSON.parse(JSON.stringify(questions));
+  shuffle(pool);
+  currentSet = pool.slice(0, Math.min(settings.count, pool.length)).map(q => ({
+    question: q.question,
+    options: sampleOptions(q.options, q.answer, Math.min(settings.choices, q.options.length)),
+    answer: q.answer
+  }));
+
+  // reset state
+  idx = 0; userAnswers = new Array(currentSet.length).fill(null);
+  quizEnded = false; mistakesCount = 0;
+  updateMistakesDisplay();
+
+  // reset & start activity timer only once here
+  stopActivityTimer();
+  startActivityTimer();
+
+  // start countdown if enabled
+  if (settings.timerEnabled && settings.time > 0) startTimer(settings.time); else startTimer(0);
+
+  renderQuestion();
+}
+
+/* --- update mistakes UI --- */
+function updateMistakesDisplay(){
+  if (settings && settings.mistakesEnabled){
+    mistakesLeftEl.style.display = '';
+    const left = Math.max(0, settings.mistakesAllowed - mistakesCount);
+    mistakesLeftEl.textContent = `Mistakes left: ${left} (allowed ${settings.mistakesAllowed})`;
+  } else {
+    mistakesLeftEl.style.display = 'none';
+  }
+}
+
+/* --- render question --- */
+function renderQuestion(){
+  if (!currentSet.length){ quizDiv.innerHTML = '<div style="padding:18px;color:#bfe">Press Start to begin</div>'; return; }
+  const q = currentSet[idx];
+  quizDiv.innerHTML = '';
+  const qText = document.createElement('div'); qText.className='question'; qText.textContent = `${idx+1}. ${q.question}`; quizDiv.appendChild(qText);
+  const optsWrap = document.createElement('div'); optsWrap.className='options';
+
+  q.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'answer-btn';
+    btn.type = 'button';
+    btn.dataset.value = opt;
+    btn.textContent = opt;
+    // On click: evaluate answer but DO NOT restart activity timer
+    btn.addEventListener('click', () => handleAnswer(q, opt, btn));
+    optsWrap.appendChild(btn);
+  });
+
+  quizDiv.appendChild(optsWrap);
+  updateProgress();
+}
+
+/* --- handle answer --- */
+function handleAnswer(qObj, chosen, chosenBtn){
+  // Do not restart activity timer here — only start it at quiz start.
+  const buttons = Array.from(quizDiv.querySelectorAll('.answer-btn'));
+  buttons.forEach(b => b.disabled = true);
+  buttons.forEach(b => {
+    if (b.dataset.value === qObj.answer) b.classList.add('correct');
+    if (b.dataset.value === chosen && chosen !== qObj.answer) b.classList.add('incorrect');
+  });
+
+  userAnswers[idx] = chosen;
+
+  if (chosen !== qObj.answer){
+    mistakesCount++;
+    updateMistakesDisplay();
+    if (settings.mistakesEnabled && mistakesCount > settings.mistakesAllowed){
+      quizEnded = true;
+      stopActivityTimer();
+      setTimeout(()=> showResults(), 420);
+      return;
+    }
+  }
+
+  setTimeout(()=>{
+    if (quizEnded) return;
+    if (idx < currentSet.length - 1){ idx++; renderQuestion(); }
+    else { stopActivityTimer(); showResults(); }
+  }, 450);
+}
+
+/* --- progress --- */
+function updateProgress(){
+  const pct = currentSet.length>1 ? Math.round(((idx)/(Math.max(1,currentSet.length-1))) * 100) : 0;
+  progressBar.style.width = `${pct}%`;
+  counterEl.textContent = `Question ${idx+1} of ${currentSet.length}`;
+}
+
+/* --- results --- */
+function showResults(){
+  quizEnded = true;
+  if (timerInterval) clearInterval(timerInterval);
+  stopActivityTimer();
+
+  quizDiv.innerHTML = '';
+  const out = document.createElement('div'); out.style.padding='12px';
+  out.innerHTML = '<h3 style="color:#fff;margin-top:0">Results</h3>';
+  let correct = 0;
+  currentSet.forEach((q,i)=>{
+    const ua = userAnswers[i];
+    const ok = ua === q.answer;
+    if (ok) correct++;
+    const row = document.createElement('div'); row.style.marginBottom='10px';
+    row.innerHTML = `<strong style="color:#fff">${i+1}. ${q.question}</strong><div style="margin-top:6px;color:${ok?'#ffd700':'#ff9aa2'}">Your: ${ua?ua:'—'}</div>${ok?'':`<div style="color:#ffd700">Ans: ${q.answer}</div>`}`;
+    out.appendChild(row);
+  });
+  out.innerHTML += `<div style="margin-top:12px;color:#dff"><strong>Score: ${correct} / ${currentSet.length}</strong></div>`;
+  if (settings && settings.mistakesEnabled){
+    out.innerHTML += `<div style="margin-top:8px;color:#ffb3b3"><strong>Mistakes made: ${mistakesCount} (allowed ${settings.mistakesAllowed})</strong></div>`;
+  }
+  if (activityStart){ const elapsedSecs = Math.floor((Date.now() - activityStart)/1000); out.innerHTML += `<div style="margin-top:8px;color:#ffb3b3"><strong>Elapsed time: ${formatTime(elapsedSecs)}</strong></div>`; }
+
+  const retakeBtn = document.createElement('button'); retakeBtn.textContent = 'Retake Quiz'; retakeBtn.className='small-btn'; retakeBtn.style.marginTop='12px';
+  retakeBtn.addEventListener('click', startQuiz);
+  out.appendChild(retakeBtn);
+
+  quizDiv.appendChild(out);
+  progressBar.style.width='100%';
+  counterEl.textContent = `Done — Score ${correct}/${currentSet.length}`;
+}
+
+/* --- auto-start on load --- */
+window.addEventListener('load', ()=>{ applySettingsToUI(); setTimeout(()=>{ if(!selectsDirty) startQuiz(); }, 120); });
+startBtn.addEventListener('click', startQuiz);
+
+/* --- themes (restored full set) --- */
+const THEMES = {
+  "Neon Night": { "--bg1":"#291c6e","--bg2":"#00167d","--panel":"#12132a","--accent":"#2debb0" },
+  "Sunset Glow": { "--bg1":"#ff7e5f","--bg2":"#feb47b","--panel":"#2e1d12","--accent":"#ffd166" },
+  "Ocean Blue": { "--bg1":"#006994","--bg2":"#003459","--panel":"#012a36","--accent":"#00e5ff" },
+  "Forest Green": { "--bg1":"#1b4332","--bg2":"#081c15","--panel":"#0f5132","--accent":"#95d5b2" },
+  "Royal Purple": { "--bg1":"#3c096c","--bg2":"#240046","--panel":"#10002b","--accent":"#9d4edd" },
+  "Golden Desert": { "--bg1":"#d97706","--bg2":"#92400e","--panel":"#78350f","--accent":"#fcd34d" },
+  "Candy Pink": { "--bg1":"#ff80ab","--bg2":"#ec407a","--panel":"#880e4f","--accent":"#f8bbd0" },
+  "Sky Cyan": { "--bg1":"#00c6ff","--bg2":"#0072ff","--panel":"#012a4a","--accent":"#90e0ef" },
+  "Elegant Gray": { "--bg1":"#2c2c2c","--bg2":"#1a1a1a","--panel":"#111111","--accent":"#bfbfbf" }
+};
+
+/* --- theme select population & apply (patched) --- */
+const themeSelect = document.getElementById('themeSelect');
+const THEME_KEY = "quiz_theme_choice";
+// populate the dropdown if the element exists
+if (themeSelect) {
+  Object.keys(THEMES).forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    themeSelect.appendChild(opt);
+  });
+
+  // load saved theme or default
+  let savedTheme = localStorage.getItem(THEME_KEY) || "Neon Night";
+  if (!THEMES[savedTheme]) savedTheme = "Neon Night";
+  themeSelect.value = savedTheme;
+
+  function applyTheme(name){
+    const theme = THEMES[name] || THEMES["Neon Night"];
+    Object.keys(theme).forEach(key => {
+      document.documentElement.style.setProperty(key, theme[key]);
+    });
+    document.body.style.background = `radial-gradient(circle at 10% 10%, #06104a 0%, var(--bg1) 25%, var(--bg2) 70%)`;
+    localStorage.setItem(THEME_KEY, name);
+  }
+
+  // apply initial theme and hook change event
+  applyTheme(savedTheme);
+  themeSelect.addEventListener('change', ()=>{ applyTheme(themeSelect.value); });
+}
+
+</script>
+</body>
+</html>
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+              
